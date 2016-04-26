@@ -1,15 +1,15 @@
 package io.strongtyped.active.slick.docexamples
 
 import io.strongtyped.active.slick.docexamples.ActiveSlickWithCodegen.ComputersRepo
-import io.strongtyped.active.slick.docexamples.ActiveSlickWithCodegen.ComputersRepo.EntryExtensions
 import io.strongtyped.active.slick.test.H2Suite
 import org.scalatest._
-import ComputersRepo.EntryExtensions
 import io.strongtyped.active.slick.docexamples.codegen.Tables.ComputersRow
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 
 class ActiveSlickWithCodegenTest extends FlatSpec with H2Suite with OptionValues {
+
+  import ActiveSlickWithCodegen._
 
   "ActiveSlickWithCodegen" should "provide crud and active record semantics for generated tables" in {
 
@@ -18,7 +18,7 @@ class ActiveSlickWithCodegenTest extends FlatSpec with H2Suite with OptionValues
     query(ComputersRepo.count) shouldBe 0
 
     // Add a Computer without default ID 0. Make sure it gets an ID and all data are stored
-    val newComputer = ComputersRow(id = 0L, name = "Macbook Pro 15")
+    val newComputer = PendingComputer(name = "Macbook Pro 15")
     val savedComputer = commit(newComputer.save())
     savedComputer.id should be(1L)
     savedComputer.name should be("Macbook Pro 15")
@@ -27,7 +27,7 @@ class ActiveSlickWithCodegenTest extends FlatSpec with H2Suite with OptionValues
     // Query the Computer we saved, update it, and delete it.
     query(ComputersRepo.findById(1L)) shouldBe savedComputer
 
-    val updatedComputer = commit(savedComputer.copy(name = "MBP 15").save())
+    val updatedComputer = commit(savedComputer.copy(name = "MBP 15").update())
     updatedComputer.id should be(savedComputer.id)
     updatedComputer.name should be("MBP 15")
 

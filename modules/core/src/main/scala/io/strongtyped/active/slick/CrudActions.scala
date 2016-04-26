@@ -17,6 +17,9 @@ trait CrudActions {
   import jdbcProfile.api._
 
   type Model
+
+  type PendingModel
+
   // tag::adoc[]
   /** Returns total table count */
   def count: DBIO[Int]
@@ -25,7 +28,7 @@ trait CrudActions {
     * Insert `Model` if not yet persisted, otherwise update it. 
     * @return DBIO[Model] for a `Model` as persisted in the table. 
     */
-  def save(entity: Model)(implicit exc: ExecutionContext): DBIO[Model]
+  def create(pendingEntity: PendingModel)(implicit exc: ExecutionContext): DBIO[Model]
 
   /** Update a `Model`. 
     * @return DBIO[Model] for a `Model` as persisted in the table. 

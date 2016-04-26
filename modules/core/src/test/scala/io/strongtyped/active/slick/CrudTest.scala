@@ -18,16 +18,16 @@ class CrudTest extends FlatSpec with H2Suite with JdbcProfileProvider {
         initialCount <- Foos.count
 
         // save new entry
-        savedEntry <- Foo("Foo").save()
+        savedEntry <- PendingFoo("Foo").save()
 
         // count again, must be initialCount + 1
         count <- Foos.count
 
         // update entry
-        updatedEntry <- savedEntry.copy(name = "Bar").save()
+        updatedEntry <- savedEntry.copy(name = "Bar").update()
 
         // find it back from DB
-        found <- Foos.findById(savedEntry.id.get)
+        found <- Foos.findById(savedEntry.id)
 
         // delete it
         _ <- found.delete()
@@ -40,7 +40,6 @@ class CrudTest extends FlatSpec with H2Suite with JdbcProfileProvider {
         count shouldBe (initialCount + 1)
 
         // check entity properties
-        savedEntry.id shouldBe 'defined
         savedEntry.name shouldBe "Foo"
 
         // found entry must be a 'Bar'
@@ -59,7 +58,9 @@ class CrudTest extends FlatSpec with H2Suite with JdbcProfileProvider {
   }
 
 
-  case class Foo(name: String, id: Option[Int] = None)
+  case class Foo(name: String, id: Int)
+
+  case class PendingFoo(name: String)
 
   class FooDao extends EntityActions with H2ProfileProvider {
 
@@ -67,6 +68,7 @@ class CrudTest extends FlatSpec with H2Suite with JdbcProfileProvider {
 
     val baseTypedType: BaseTypedType[Id] = implicitly[BaseTypedType[Id]]
 
+    type PendingEntity = PendingFoo
     type Entity = Foo
     type Id = Int
 
@@ -76,7 +78,7 @@ class CrudTest extends FlatSpec with H2Suite with JdbcProfileProvider {
 
       def id = column[Int]("ID", O.PrimaryKey, O.AutoInc)
 
-      def * = (name, id.?) <>(Foo.tupled, Foo.unapply)
+      def * = (name, id) <>(Foo.tupled, Foo.unapply)
     }
 
     type EntityTable = FooTable
@@ -90,11 +92,15 @@ class CrudTest extends FlatSpec with H2Suite with JdbcProfileProvider {
       import jdbcProfile.api._
       tableQuery.schema.create
     }
+
+    override def entity(pendingEntity: PendingFoo): Foo = Foo(pendingEntity.name, -1)
   }
 
   val Foos = new FooDao
 
 
   implicit class EntryExtensions(val model: Foo) extends ActiveRecord(Foos)
+
+  implicit class PendingEntryExtensions(val pendingModel: PendingFoo) extends PendingActiveRecord(Foos)
 
 }

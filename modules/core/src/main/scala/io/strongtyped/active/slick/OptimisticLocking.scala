@@ -36,16 +36,10 @@ trait OptimisticLocking {
     }
   }
 
-  override def save(versionable: self.Entity)(implicit exc: ExecutionContext): DBIO[self.Entity] = {
-    self.idLens.get(versionable) match {
-      // if has an Id, try to update it
-      case Some(id) => update(id, versionable)
-
-      // if has no Id, try to add it
-      case None =>
-        // initialize versioning
-        val modelWithVersion = versionLens.set(versionable, 1)
-        self.insert(modelWithVersion).map { id => idLens.set(modelWithVersion, Option(id)) }
-    }
+  override def update(versionable: self.Entity)(implicit exc: ExecutionContext): DBIO[self.Entity] = {
+    val id = self.idLens.get(versionable)
+    update(id, versionable)
   }
+
+
 }

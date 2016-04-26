@@ -14,14 +14,12 @@ class SupplierTest extends FlatSpec with H2Suite with Schema {
   it should "be persistable" in {
     val initialCount = query(Suppliers.count)
 
-    val supplier = Supplier("Acme, Inc.")
-    supplier.id should not be defined
+    val supplier = PendingSupplier("Acme, Inc.")
 
     val savedSupplier =
       commit {
         supplier.save()
       }
-    savedSupplier.id shouldBe defined
 
     val countAfterSave = query(Suppliers.count)
     countAfterSave shouldBe (initialCount + 1)
@@ -35,23 +33,23 @@ class SupplierTest extends FlatSpec with H2Suite with Schema {
 
   it should "be versionable" in {
 
-    val supplier = Supplier("abc")
-    // no version yet
-    supplier.version shouldBe 0
+    val supplier = PendingSupplier("abc")
 
     val persistedSupp = commit(supplier.save())
-    persistedSupp.version should not be 0
+    persistedSupp.version shouldBe 0
 
     // modify two versions and try to persist them
-    val suppWithNewVersion = commit(persistedSupp.copy(name = "abc1").save())
+    val suppWithNewVersion = commit(persistedSupp.copy(name = "abc1").update())
+    suppWithNewVersion.version shouldBe 1
 
     intercept[StaleObjectStateException[Supplier]] {
       // supplier was persisted in the mean time, so version must be different by now
-      commit(persistedSupp.copy(name = "abc2").save())
+      commit(persistedSupp.copy(name = "abc2").update())
     }
 
     // supplier with new version can be persisted again
-    commit(suppWithNewVersion.copy(name = "abc").save())
+    val suppWithNewerVersion = commit(suppWithNewVersion.copy(name = "abc").update())
+    suppWithNewerVersion.version shouldBe 2
   }
 
   it should "return an error when deleting a supplier with beers linked to it" in {
@@ -59,8 +57,8 @@ class SupplierTest extends FlatSpec with H2Suite with Schema {
     val deleteResult =
       rollback {
         for {
-          supplier <- Supplier("Acme, Inc.").save()
-          beer <- Beer("Abc", supplier.id.get, 3.2).save()
+          supplier <- PendingSupplier("Acme, Inc.").save()
+          beer <- PendingBeer("Abc", supplier.id, 3.2).save()
           deleteResult <- supplier.delete().asTry
         } yield deleteResult
       }

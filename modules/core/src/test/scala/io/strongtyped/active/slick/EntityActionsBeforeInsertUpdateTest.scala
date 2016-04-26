@@ -18,7 +18,7 @@ class EntityActionsBeforeInsertUpdateTest
     val result =
       rollback {
         for {
-          result <- Foo("  ").save().asTry
+          result <- PendingFoo("  ").save().asTry
         } yield result
       }
 
@@ -32,9 +32,9 @@ class EntityActionsBeforeInsertUpdateTest
 
         val finalAction =
           for {
-            savedEntry <- Foo("abc").save()
+            savedEntry <- PendingFoo("abc").save()
             // update name should fail according to beforeUpdate method definition
-            updatedEntry <- savedEntry.copy(name = "Bar").save()
+            updatedEntry <- savedEntry.copy(name = "Bar").update()
           } yield updatedEntry
 
         finalAction.asTry
@@ -49,7 +49,9 @@ class EntityActionsBeforeInsertUpdateTest
   }
 
 
-  case class Foo(name: String, id: Option[Int] = None)
+  case class Foo(name: String, id: Int)
+
+  case class PendingFoo(name: String)
 
   class NameShouldNotBeEmptyException extends RuntimeException("Name should not be empty")
 
@@ -62,6 +64,7 @@ class EntityActionsBeforeInsertUpdateTest
     val baseTypedType: BaseTypedType[Id] = implicitly[BaseTypedType[Id]]
 
     type EntityTable = FooTable
+    type PendingEntity = PendingFoo
     type Entity = Foo
     type Id = Int
 
@@ -71,7 +74,7 @@ class EntityActionsBeforeInsertUpdateTest
 
       def id = column[Int]("ID", O.PrimaryKey, O.AutoInc)
 
-      def * = (name, id.?) <>(Foo.tupled, Foo.unapply)
+      def * = (name, id) <>(Foo.tupled, Foo.unapply)
 
     }
 
@@ -83,8 +86,8 @@ class EntityActionsBeforeInsertUpdateTest
 
     //@formatter:off
     // tag::adoc[]
-    override def beforeInsert(model: Foo)
-                             (implicit exc: ExecutionContext): DBIO[Foo] = {
+    override def beforeInsert(model: PendingFoo)
+                             (implicit exc: ExecutionContext): DBIO[PendingFoo] = {
       if (model.name.trim.isEmpty) {
         DBIO.failed(new NameShouldNotBeEmptyException)
       } else {
@@ -109,11 +112,14 @@ class EntityActionsBeforeInsertUpdateTest
       import jdbcProfile.api._
       tableQuery.schema.create
     }
+
+    override def entity(pendingEntity: PendingFoo): Foo = Foo(pendingEntity.name, -1)
   }
 
   val Foos = new FooDao
 
-
   implicit class EntryExtensions(val model: Foo) extends ActiveRecord(Foos)
+
+  implicit class PendingEntryExtensions(val pendingModel: PendingFoo) extends PendingActiveRecord(Foos)
 
 }

@@ -24,7 +24,7 @@ abstract class EntityActions extends EntityActionsLike {
 
   def $id(table: EntityTable): Rep[Id]
 
-  def idLens: Lens[Entity, Option[Id]]
+  def idLens: Lens[Entity, Id]
 
   override def count: DBIO[Int] = tableQuery.size.result
 
@@ -34,15 +34,21 @@ abstract class EntityActions extends EntityActionsLike {
   override def findOptionById(id: Id): DBIO[Option[Entity]] =
     filterById(id).result.headOption
 
-  override def save(entity: Entity)(implicit exc: ExecutionContext): DBIO[Entity] = {
-    idLens.get(entity) match {
-      // if has an Id, try to update it
-      case Some(id) => update(entity)
+//  override def save(entity: Entity)(implicit exc: ExecutionContext): DBIO[Entity] = {
+//    idLens.get(entity) match {
+//      // if has an Id, try to update it
+//      case Some(id) => update(entity)
+//
+//      // if has no Id, try to add it
+//      case None => insert(entity).map { id =>
+//        idLens.set(entity, Option(id))
+//      }
+//    }
+//  }
 
-      // if has no Id, try to add it
-      case None => insert(entity).map { id =>
-        idLens.set(entity, Option(id))
-      }
+  def create(pendingEntity: PendingModel)(implicit exc: ExecutionContext): DBIO[Model] = {
+    insert(pendingEntity) flatMap { id =>
+      findById(id)
     }
   }
 
@@ -76,9 +82,9 @@ abstract class EntityActions extends EntityActionsLike {
    * }
    * }}}
    */
-  def beforeInsert(entity: Entity)(implicit exc: ExecutionContext): DBIO[Entity] = {
+  def beforeInsert(pendingEntity: PendingEntity)(implicit exc: ExecutionContext): DBIO[PendingEntity] = {
     // default implementation does nothing
-    DBIO.successful(entity)
+    DBIO.successful(pendingEntity)
   }
 
 
@@ -120,9 +126,9 @@ abstract class EntityActions extends EntityActionsLike {
     DBIO.successful(entity)
   }
 
-  override def insert(entity: Entity)(implicit exc: ExecutionContext): DBIO[Id] = {
-    val action = beforeInsert(entity).flatMap { preparedModel =>
-      tableQuery.returning(tableQuery.map($id)) += preparedModel
+  override def insert(pendingEntity: PendingEntity)(implicit exc: ExecutionContext): DBIO[Id] = {
+    val action = beforeInsert(pendingEntity).flatMap { preparedModel =>
+      tableQuery.returning(tableQuery.map($id)) += entity(preparedModel)
     }
     // beforeInsert and '+=' must run on same tx
     action.transactionally
@@ -136,9 +142,9 @@ abstract class EntityActions extends EntityActionsLike {
   }
 
   override def update(entity: Entity)(implicit exc: ExecutionContext): DBIO[Entity] = {
+    val id = idLens.get(entity)
     val action =
       for {
-        id <- tryExtractId(entity)
         preparedModel <- beforeUpdate(id, entity)
         updatedModel <- update(id, preparedModel)
       } yield updatedModel
@@ -161,9 +167,7 @@ abstract class EntityActions extends EntityActionsLike {
   }
 
   override def delete(entity: Entity)(implicit exc: ExecutionContext): DBIO[Int] = {
-    tryExtractId(entity).flatMap { id =>
-      deleteById(id)
-    }
+    deleteById(idLens.get(entity))
   }
 
   def deleteById(id: Id)(implicit exc: ExecutionContext): DBIO[Int] = {
@@ -171,12 +175,12 @@ abstract class EntityActions extends EntityActionsLike {
   }
 
 
-  private def tryExtractId(entity: Entity): DBIO[Id] = {
-    idLens.get(entity) match {
-      case Some(id) => SuccessAction(id)
-      case None => FailureAction(new RowNotFoundException(entity))
-    }
-  }
+//  private def tryExtractId(entity: Entity): DBIO[Id] = {
+//    idLens.get(entity) match {
+//      case Some(id) => SuccessAction(id)
+//      case None => FailureAction(new RowNotFoundException(entity))
+//    }
+//  }
 
   def filterById(id: Id) = tableQuery.filter($id(_) === id)
 

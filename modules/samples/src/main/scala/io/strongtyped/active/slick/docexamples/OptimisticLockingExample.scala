@@ -12,7 +12,9 @@ object OptimisticLockingExample {
 
   //@formatter:off
   // tag::adoc[]
-  case class Coffee(name: String, version: Long = 0, id: Option[Int] = None)
+  case class Coffee(name: String, version: Long = 0, id: Int)
+
+  case class PendingCoffee(name: String)
 
   object CoffeeRepo extends EntityActions with OptimisticLocking with H2ProfileProvider {
 
@@ -27,13 +29,14 @@ object OptimisticLockingExample {
       def name = column[String]("NAME")
       def id = column[Id]("ID", O.PrimaryKey, O.AutoInc)
       def version = column[Long]("VERSION")
-      def * = (name, version, id.?) <>(Coffee.tupled, Coffee.unapply)
+      def * = (name, version, id) <>(Coffee.tupled, Coffee.unapply)
     }
     // end::adoc[]
     //@formatter:on
 
     val baseTypedType = implicitly[BaseTypedType[Id]]
 
+    type PendingEntity = PendingCoffee
     type Entity = Coffee
     type Id = Int
     type EntityTable = CoffeeTable
@@ -48,11 +51,13 @@ object OptimisticLockingExample {
     def findByName(name: String): DBIO[Seq[Coffee]] = {
       tableQuery.filter(_.name === name).result
     }
+
+    override def entity(pendingEntity: PendingCoffee): Coffee = Coffee(pendingEntity.name, 0, -1)
   }
 
-  implicit class EntryExtensions(val model: Coffee) extends ActiveRecord(CoffeeRepo) {
+  implicit class EntryExtensions(val model: Coffee) extends ActiveRecord(CoffeeRepo)
 
-  }
+  implicit class PendingEntryExtensions(val pendingModel: PendingCoffee) extends PendingActiveRecord(CoffeeRepo)
 
-  val saveAction = Coffee("Colombia").save()
+  val saveAction = PendingCoffee("Colombia").save()
 }

@@ -1,6 +1,5 @@
 package io.strongtyped.active.slick
 
-import slick.ast.BaseTypedType
 import slick.driver.JdbcProfile
 
 import scala.concurrent.ExecutionContext
@@ -17,16 +16,24 @@ trait EntityActionsLike extends CrudActions {
 
   /** The type of the Entity */
   type Entity
+
+  /** The type of the Entity in a Pending state */
+  type PendingEntity
+
   /** The `Entity`'s Id type */
   type Id
   /** CrudActions.Model is the `Entity` in this context */
   type Model = Entity
 
+  type PendingModel = PendingEntity
+
+  def entity(pendingEntity: PendingEntity): Entity
+
   // tag::adoc[]
   /** Insert a new `Entity`
     * @return DBIO[Id] for the generated `Id`
     */
-  def insert(entity: Entity)(implicit exc: ExecutionContext): DBIO[Id]
+  def insert(entity: PendingEntity)(implicit exc: ExecutionContext): DBIO[Id]
 
   /** Delete a `Entity` by `Id`
     * @return DBIO[Int] with the number of affected rows

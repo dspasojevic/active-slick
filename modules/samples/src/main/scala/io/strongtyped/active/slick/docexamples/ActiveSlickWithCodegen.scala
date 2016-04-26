@@ -1,6 +1,6 @@
 package io.strongtyped.active.slick.docexamples
 
-import io.strongtyped.active.slick.{ActiveRecord, JdbcProfileProvider, Lens, EntityActions}
+import io.strongtyped.active.slick._
 import io.strongtyped.active.slick.docexamples.codegen.Tables
 import slick.ast.BaseTypedType
 
@@ -26,24 +26,30 @@ object ActiveSlickWithCodegen {
     import jdbcProfile.api._
 
     type Entity = Tables.ComputersRow
+    type PendingEntity = PendingComputer
     type Id = Long
     type EntityTable = Tables.Computers
 
     val baseTypedType = implicitly[BaseTypedType[Id]]
     val tableQuery = Tables.Computers
-    val idLens: Lens[Tables.ComputersRow, Option[Long]] = {
+    val idLens: Lens[Tables.ComputersRow, Long] = {
       // For the getter, use 0L as a sentinel value because generated ID is usually non-optional
-      Lens.lens { row: Tables.ComputersRow => if (row.id == 0L) None else Some(row.id) } { (row, maybeId) => maybeId map { id => row.copy(id = id) } getOrElse row }
+      Lens.lens { row: Tables.ComputersRow =>row.id } { (row, id) => row.copy(id = id) }
     }
 
     override def $id(table: EntityTable): Rep[Long] = {
       table.id
     }
 
-    implicit class EntryExtensions(val model: Tables.ComputersRow) extends ActiveRecord(ComputersRepo)
+    override def entity(pendingEntity: PendingComputer): Tables.ComputersRow = Tables.ComputersRow(0, pendingEntity.name)
 
   }
 
   object ComputersRepo extends ComputersRepo(Tables)
 
+  implicit class EntryExtensions(val model: Tables.ComputersRow) extends ActiveRecord(ComputersRepo)
+
+  implicit class PendingEntryExtensions(val pendingModel: PendingComputer) extends PendingActiveRecord(ComputersRepo)
+
+  final case class PendingComputer(name: String)
 }
