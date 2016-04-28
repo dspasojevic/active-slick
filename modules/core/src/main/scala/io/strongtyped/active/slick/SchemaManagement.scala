@@ -5,7 +5,7 @@ trait SchemaManagement {
 
   import jdbcProfile.api._
 
-  def createSchema: DBIO[Unit] = tableQuery.schema.create
+  def createSchema: DBIO[Unit] = ??? // tableQuery.schema.create
 
-  def dropSchema: DBIO[Unit] = tableQuery.schema.drop
+  def dropSchema: DBIO[Unit] = ??? // tableQuery.schema.drop
 }

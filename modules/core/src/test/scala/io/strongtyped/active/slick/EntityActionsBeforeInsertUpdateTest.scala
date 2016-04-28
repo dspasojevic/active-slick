@@ -86,8 +86,8 @@ class EntityActionsBeforeInsertUpdateTest
 
     //@formatter:off
     // tag::adoc[]
-    override def beforeInsert(model: PendingFoo)
-                             (implicit exc: ExecutionContext): DBIO[PendingFoo] = {
+    override def beforeInsert(model: Foo)
+                             (implicit exc: ExecutionContext): DBIO[Foo] = {
       if (model.name.trim.isEmpty) {
         DBIO.failed(new NameShouldNotBeEmptyException)
       } else {

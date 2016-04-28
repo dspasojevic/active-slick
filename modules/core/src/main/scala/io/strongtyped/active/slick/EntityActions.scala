@@ -3,13 +3,12 @@ package io.strongtyped.active.slick
 import io.strongtyped.active.slick.DBIOExtensions._
 import io.strongtyped.active.slick.exceptions.{NoRowsAffectedException, RowNotFoundException}
 import slick.ast.BaseTypedType
-import slick.dbio.{FailureAction, SuccessAction}
 
 import scala.concurrent.ExecutionContext
 import scala.language.{existentials, higherKinds, implicitConversions}
 import scala.util.{Failure, Success}
 
-abstract class EntityActions extends EntityActionsLike {
+trait EntityActions extends EntityActionsLike {
   this: JdbcProfileProvider =>
 
   import jdbcProfile.api._
@@ -20,7 +19,7 @@ abstract class EntityActions extends EntityActionsLike {
 
   type EntityTable <: Table[Entity]
 
-  def tableQuery: TableQuery[EntityTable]
+  def tableQuery: Query[EntityTable, EntityTable#TableElementType, Seq]
 
   def $id(table: EntityTable): Rep[Id]
 
@@ -34,19 +33,7 @@ abstract class EntityActions extends EntityActionsLike {
   override def findOptionById(id: Id): DBIO[Option[Entity]] =
     filterById(id).result.headOption
 
-//  override def save(entity: Entity)(implicit exc: ExecutionContext): DBIO[Entity] = {
-//    idLens.get(entity) match {
-//      // if has an Id, try to update it
-//      case Some(id) => update(entity)
-//
-//      // if has no Id, try to add it
-//      case None => insert(entity).map { id =>
-//        idLens.set(entity, Option(id))
-//      }
-//    }
-//  }
-
-  def create(pendingEntity: PendingModel)(implicit exc: ExecutionContext): DBIO[Model] = {
+  override def create(pendingEntity: PendingModel)(implicit exc: ExecutionContext): DBIO[Model] = {
     insert(pendingEntity) flatMap { id =>
       findById(id)
     }
@@ -82,9 +69,9 @@ abstract class EntityActions extends EntityActionsLike {
    * }
    * }}}
    */
-  def beforeInsert(pendingEntity: PendingEntity)(implicit exc: ExecutionContext): DBIO[PendingEntity] = {
+  def beforeInsert(entity: Entity)(implicit exc: ExecutionContext): DBIO[Entity] = {
     // default implementation does nothing
-    DBIO.successful(pendingEntity)
+    DBIO.successful(entity)
   }
 
 
@@ -127,8 +114,10 @@ abstract class EntityActions extends EntityActionsLike {
   }
 
   override def insert(pendingEntity: PendingEntity)(implicit exc: ExecutionContext): DBIO[Id] = {
-    val action = beforeInsert(pendingEntity).flatMap { preparedModel =>
-      tableQuery.returning(tableQuery.map($id)) += entity(preparedModel)
+    val entityToInsert = entity(pendingEntity)
+
+    val action = beforeInsert(entityToInsert).flatMap { preparedModel =>
+      tableQuery.returning(tableQuery.map($id)) += preparedModel
     }
     // beforeInsert and '+=' must run on same tx
     action.transactionally
@@ -170,19 +159,11 @@ abstract class EntityActions extends EntityActionsLike {
     deleteById(idLens.get(entity))
   }
 
-  def deleteById(id: Id)(implicit exc: ExecutionContext): DBIO[Int] = {
+  override def deleteById(id: Id)(implicit exc: ExecutionContext): DBIO[Int] = {
     filterById(id).delete.mustAffectOneSingleRow
   }
 
-
-//  private def tryExtractId(entity: Entity): DBIO[Id] = {
-//    idLens.get(entity) match {
-//      case Some(id) => SuccessAction(id)
-//      case None => FailureAction(new RowNotFoundException(entity))
-//    }
-//  }
-
-  def filterById(id: Id) = tableQuery.filter($id(_) === id)
+  def filterById(id: Id): Query[EntityTable, Entity, Seq] = tableQuery.filter($id(_) === id)
 
 
 }
