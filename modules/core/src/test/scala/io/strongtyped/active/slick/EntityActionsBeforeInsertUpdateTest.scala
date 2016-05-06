@@ -1,5 +1,6 @@
 package io.strongtyped.active.slick
 
+import io.strongtyped.active.slick.JdbcProfileProvider.H2ProfileProvider
 import io.strongtyped.active.slick.test.H2Suite
 import org.scalatest.FlatSpec
 import slick.ast.BaseTypedType
@@ -57,9 +58,9 @@ class EntityActionsBeforeInsertUpdateTest
 
   class NameCanNotBeModifiedException extends RuntimeException("Name can not be modified")
 
-  class FooDao extends EntityActions with H2ProfileProvider {
+  class FooDao extends EntityActions[Foo, PendingFoo] with H2ProfileProvider {
 
-    import jdbcProfile.api._
+    import driver.api._
 
     val baseTypedType: BaseTypedType[Id] = implicitly[BaseTypedType[Id]]
 
@@ -109,7 +110,7 @@ class EntityActionsBeforeInsertUpdateTest
     //@formatter:on
 
     def createSchema = {
-      import jdbcProfile.api._
+      import driver.api._
       tableQuery.schema.create
     }
 
@@ -118,8 +119,8 @@ class EntityActionsBeforeInsertUpdateTest
 
   val Foos = new FooDao
 
-  implicit class EntryExtensions(val model: Foo) extends ActiveRecord(Foos)
+  implicit class EntryExtensions(val model: Foo) extends ActiveRecord[Foo, FooDao](Foos)
 
-  implicit class PendingEntryExtensions(val pendingModel: PendingFoo) extends PendingActiveRecord(Foos)
+  implicit class PendingEntryExtensions(val pendingModel: PendingFoo) extends PendingActiveRecord[Foo, PendingFoo, FooDao](Foos)
 
 }

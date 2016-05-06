@@ -8,10 +8,9 @@ import scala.concurrent.ExecutionContext
 import scala.language.{existentials, higherKinds, implicitConversions}
 import scala.util.{Failure, Success}
 
-trait EntityActions extends EntityActionsLike {
-  this: JdbcProfileProvider =>
+trait EntityActions[Entity, PendingEntity] extends EntityActionsLike[Entity, PendingEntity] {
 
-  import jdbcProfile.api._
+  import driver.api._
 
   def baseTypedType: BaseTypedType[Id]
 
@@ -19,13 +18,15 @@ trait EntityActions extends EntityActionsLike {
 
   type EntityTable <: Table[Entity]
 
-  def tableQuery: Query[EntityTable, EntityTable#TableElementType, Seq]
+  def tableQuery: TableQuery[EntityTable]
+
+  def baseQuery: Query[EntityTable, EntityTable#TableElementType, Seq] = tableQuery
 
   def $id(table: EntityTable): Rep[Id]
 
   def idLens: Lens[Entity, Id]
 
-  override def count: DBIO[Int] = tableQuery.size.result
+  override def count: DBIO[Int] = baseQuery.size.result
 
   override def findById(id: Id): DBIO[Entity] =
     filterById(id).result.head
@@ -33,7 +34,7 @@ trait EntityActions extends EntityActionsLike {
   override def findOptionById(id: Id): DBIO[Option[Entity]] =
     filterById(id).result.headOption
 
-  override def create(pendingEntity: PendingModel)(implicit exc: ExecutionContext): DBIO[Model] = {
+  override def create(pendingEntity: PendingEntity)(implicit exc: ExecutionContext): DBIO[Entity] = {
     insert(pendingEntity) flatMap { id =>
       findById(id)
     }
@@ -63,7 +64,7 @@ trait EntityActions extends EntityActionsLike {
    * {{{
    * // simple audit example
    * override def beforeInsert(foo: Foo)(implicit exc: ExecutionContext): DBIO[Foo] = {
-   *    // ensure that created and lastUpdate fields are updated just before insert
+   *    // enurrisure that created and lastUpdate fields are updated just before insert
    *    val audited = foo.copy(created = DateTime.now, lastUpdate = DateTime.now)
    *    DBIO.successful(audited)
    * }
@@ -124,7 +125,7 @@ trait EntityActions extends EntityActionsLike {
   }
 
   override def fetchAll(fetchSize: Int = 100)(implicit exc: ExecutionContext): StreamingDBIO[Seq[Entity], Entity] = {
-    tableQuery
+    baseQuery
       .result
       .transactionally
       .withStatementParameters(fetchSize = fetchSize)
@@ -163,7 +164,7 @@ trait EntityActions extends EntityActionsLike {
     filterById(id).delete.mustAffectOneSingleRow
   }
 
-  def filterById(id: Id): Query[EntityTable, Entity, Seq] = tableQuery.filter($id(_) === id)
+  def filterById(id: Id): Query[EntityTable, Entity, Seq] = baseQuery.filter($id(_) === id)
 
 
 }

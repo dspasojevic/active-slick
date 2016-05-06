@@ -1,5 +1,6 @@
 package io.strongtyped.active.slick.docexamples
 
+import io.strongtyped.active.slick.JdbcProfileProvider.H2ProfileProvider
 import io.strongtyped.active.slick.Lens._
 import io.strongtyped.active.slick._
 import slick.ast.BaseTypedType
@@ -15,9 +16,9 @@ object SoftDeleteExample {
 
   case class PendingCoffee(name: String)
 
-  object CoffeeRepo extends EntityActions with SoftDeleteActions with H2ProfileProvider {
+  object CoffeeRepo extends EntityActions[Coffee, PendingCoffee] with SoftDeleteActions[Coffee, PendingCoffee] with H2ProfileProvider {
 
-    import jdbcProfile.api._
+    import driver.api._
 
     def $version(table: CoffeeTable): Rep[Long] = table.version // #<1>
     def versionLens = lens { coffee:Coffee => coffee.version }  // #<2>
@@ -65,9 +66,9 @@ object SoftDeleteExample {
     override type RecordStatus = Long
   }
 
-  implicit class EntryExtensions(val model: Coffee) extends ActiveRecord(CoffeeRepo)
+  implicit class EntryExtensions(val model: Coffee) extends ActiveRecord[Coffee, CrudActions[Coffee, _]](CoffeeRepo)
 
-  implicit class PendingEntryExtensions(val pendingModel: PendingCoffee) extends PendingActiveRecord(CoffeeRepo)
+  implicit class PendingEntryExtensions(val pendingModel: PendingCoffee) extends PendingActiveRecord[Coffee, PendingCoffee, CrudActions[Coffee, PendingCoffee]](CoffeeRepo)
 
   val saveAction = PendingCoffee("Colombia").save()
 

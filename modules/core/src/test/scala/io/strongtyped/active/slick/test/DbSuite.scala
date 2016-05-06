@@ -13,11 +13,11 @@ trait DbSuite extends BeforeAndAfterAll with Matchers with OptionValues with Try
 
   self: Suite with JdbcProfileProvider =>
 
-  import jdbcProfile.api._
+  import driver.api._
 
-  def setupDb: jdbcProfile.backend.DatabaseDef
+  def setupDb: driver.backend.DatabaseDef
 
-  private lazy val database: jdbcProfile.backend.DatabaseDef = setupDb
+  private lazy val database: driver.backend.DatabaseDef = setupDb
 
   override protected def afterAll(): Unit = {
     database.close()

@@ -6,19 +6,13 @@ import slick.ast.BaseTypedType
 
 import scala.concurrent.ExecutionContext
 
-trait MetadataEntityActions extends EntityActions {
+trait MetadataEntityActions[Entity, PendingEntity] extends EntityActions[Entity, PendingEntity] {
 
-  this: JdbcProfileProvider =>
-
-  import jdbcProfile.api._
+  import driver.api._
 
   def clock: Clock
 
-  def $dateCreated(table: EntityTable): Rep[LocalDateTime]
-
   def dateCreatedLens: Lens[Entity, LocalDateTime]
-
-  def lastUpdated(table: EntityTable): Rep[LocalDateTime]
 
   def lastUpdatedLens: Lens[Entity, LocalDateTime]
 
@@ -36,10 +30,9 @@ trait MetadataEntityActions extends EntityActions {
 
 }
 
-trait SoftDeleteActions  {
-  actions: EntityActions =>
+trait SoftDeleteActions[Entity, PendingEntity] extends EntityActions[Entity, PendingEntity] {
 
-  import jdbcProfile.api._
+  import driver.api._
 
   def baseRecordStatusTypedType: BaseTypedType[RecordStatus]
 
@@ -56,5 +49,7 @@ trait SoftDeleteActions  {
   override def deleteById(id: Id)(implicit exc: ExecutionContext): DBIO[Int] =
     filterById(id).map($recordStatus).update(deleted)
 
-  override def tableQuery: Query[EntityTable, Entity, Seq] = actions.tableQuery.filter($recordStatus(_) === active)
+  def activeRecordsFilter(table: EntityTable): Rep[Boolean] = $recordStatus(table) === active
+
+  override def baseQuery: Query[EntityTable, Entity, Seq] = super.baseQuery.filter(activeRecordsFilter)
 }

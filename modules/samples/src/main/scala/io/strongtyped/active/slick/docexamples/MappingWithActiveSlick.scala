@@ -2,9 +2,9 @@ package io.strongtyped.active.slick.docexamples
 
 //@formatter:off
 // tag::adoc[]
+import io.strongtyped.active.slick.JdbcProfileProvider.H2ProfileProvider
 import io.strongtyped.active.slick._
 import slick.ast.BaseTypedType
-import slick.driver.H2Driver
 import io.strongtyped.active.slick.Lens._
 import scala.language.postfixOps
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -15,9 +15,9 @@ object MappingWithActiveSlick {
 
   case class PendingCoffee(name: String)
 
-  object CoffeeRepo extends EntityActions with H2ProfileProvider {
+  object CoffeeRepo extends EntityActions[Coffee, PendingCoffee] with H2ProfileProvider {
 
-    import jdbcProfile.api._ // #<1>
+    import driver.api._ // #<1>
     val baseTypedType = implicitly[BaseTypedType[Id]] // #<2>
 
     type PendingEntity = PendingCoffee
@@ -46,9 +46,9 @@ object MappingWithActiveSlick {
 
 }
 
-  implicit class EntryExtensions(val model: Coffee) extends ActiveRecord(CoffeeRepo)
+  implicit class EntryExtensions(val model: Coffee) extends ActiveRecord[Coffee, CrudActions[Coffee, _]](CoffeeRepo)
 
-  implicit class PendingEntryExtension(val pendingModel: PendingCoffee) extends PendingActiveRecord(CoffeeRepo)
+  implicit class PendingEntryExtension(val pendingModel: PendingCoffee) extends PendingActiveRecord[Coffee, PendingCoffee, CrudActions[Coffee, PendingCoffee]](CoffeeRepo)
 
   val saveAction = PendingCoffee("Colombia").save()
 }

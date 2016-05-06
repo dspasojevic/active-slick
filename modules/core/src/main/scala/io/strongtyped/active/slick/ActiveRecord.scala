@@ -5,22 +5,22 @@ import slick.dbio.DBIO
 import scala.concurrent.ExecutionContext
 
 
-abstract class ActiveRecord[R <: CrudActions](val repository: R) {
+abstract class ActiveRecord[Model, R <: CrudActions[Model, _]](val repository: R) {
 
-  def model: repository.Model
+  def model: Model
 
-  def update()(implicit exc: ExecutionContext): DBIO[repository.Model] =
+  def update()(implicit exc: ExecutionContext): DBIO[Model] =
     repository.update(model)
 
   def delete()(implicit exc: ExecutionContext): DBIO[Int] = repository.delete(model)
 
 }
 
-abstract class PendingActiveRecord[R <: CrudActions](val repository: R) {
+abstract class PendingActiveRecord[Model, PendingModel, R <: CrudActions[Model, PendingModel]](val repository: R) {
 
-  def pendingModel: repository.PendingModel
+  def pendingModel: PendingModel
 
-  def save()(implicit exc: ExecutionContext): DBIO[repository.Model] =
+  def save()(implicit exc: ExecutionContext): DBIO[Model] =
     repository.create(pendingModel)
 
 }

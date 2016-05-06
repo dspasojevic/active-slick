@@ -24,8 +24,8 @@ class BeerTest extends FlatSpec with H2Suite with Schema {
       }
   }
 
-  override def createSchemaAction: jdbcProfile.api.DBIO[Unit] = {
-    jdbcProfile.api.DBIO.seq(Suppliers.createSchema, Beers.createSchema)
+  override def createSchemaAction: driver.api.DBIO[Unit] = {
+    driver.api.DBIO.seq(Suppliers.createSchema, Beers.createSchema)
   }
 
 }

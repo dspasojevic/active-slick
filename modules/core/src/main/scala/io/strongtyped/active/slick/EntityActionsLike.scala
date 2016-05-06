@@ -8,24 +8,24 @@ import scala.concurrent.ExecutionContext
  * Define basic life cycle actions for a Entity that involve.
  *
  */
-trait EntityActionsLike extends CrudActions {
+trait EntityActionsLike[Entity, PendingEntity] extends CrudActions[Entity, PendingEntity] {
 
-  val jdbcProfile: JdbcProfile
+  protected val driver: JdbcProfile
 
-  import jdbcProfile.api._
+  import driver.api._
 
   /** The type of the Entity */
-  type Entity
+//  type Entity
 
   /** The type of the Entity in a Pending state */
-  type PendingEntity
+//  type PendingEntity
 
   /** The `Entity`'s Id type */
   type Id
   /** CrudActions.Model is the `Entity` in this context */
-  type Model = Entity
+//  type Model = Entity
 
-  type PendingModel = PendingEntity
+//  type PendingModel = PendingEntity
 
   def entity(pendingEntity: PendingEntity): Entity
 

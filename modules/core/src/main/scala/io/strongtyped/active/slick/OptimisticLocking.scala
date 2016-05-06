@@ -5,17 +5,17 @@ import io.strongtyped.active.slick.DBIOExtensions._
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
-trait OptimisticLocking {
-  self: EntityActions =>
+trait OptimisticLocking[Entity] {
+  self: EntityActions[Entity, _] =>
 
 
-  import self.jdbcProfile.api._
+  import self.driver.api._
 
   def $version(table: EntityTable): Rep[Long]
 
-  def versionLens: Lens[self.Entity, Long]
+  def versionLens: Lens[Entity, Long]
 
-  override protected def update(id: self.Id, versionable: self.Entity)(implicit exc: ExecutionContext): DBIO[self.Entity] = {
+  override protected def update(id: self.Id, versionable: Entity)(implicit exc: ExecutionContext): DBIO[Entity] = {
 
     // extract current version
     val currentVersion = versionLens.get(versionable)
@@ -36,7 +36,7 @@ trait OptimisticLocking {
     }
   }
 
-  override def update(versionable: self.Entity)(implicit exc: ExecutionContext): DBIO[self.Entity] = {
+  override def update(versionable: Entity)(implicit exc: ExecutionContext): DBIO[Entity] = {
     val id = self.idLens.get(versionable)
     update(id, versionable)
   }

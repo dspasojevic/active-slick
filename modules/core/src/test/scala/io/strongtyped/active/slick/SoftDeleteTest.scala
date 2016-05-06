@@ -1,10 +1,10 @@
 package io.strongtyped.active.slick
 
+import io.strongtyped.active.slick.JdbcProfileProvider.H2ProfileProvider
 import io.strongtyped.active.slick.Lens._
 import io.strongtyped.active.slick.test.H2Suite
 import org.scalatest.{FlatSpec, OptionValues}
 import slick.ast.BaseTypedType
-import slick.profile.{SqlAction, FixedSqlAction}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -39,12 +39,12 @@ class SoftDeleteTest
         count <- Foos.count
       } yield {
         count shouldBe initialCount
-        found.value shouldBe None
+        found shouldBe None
       }
     }
   }
 
-  override def createSchemaAction: Foos.jdbcProfile.api.DBIO[Unit] = {
+  override def createSchemaAction: Foos.driver.api.DBIO[Unit] = {
     Foos.createSchema
   }
 
@@ -53,9 +53,9 @@ class SoftDeleteTest
 
   case class PendingFoo(name: String)
 
-  class FooDao extends EntityActions with SoftDeleteActions with H2ProfileProvider {
+  class FooDao extends EntityActions[Foo, PendingFoo] with SoftDeleteActions[Foo, PendingFoo] with H2ProfileProvider {
 
-    import jdbcProfile.api._
+    import driver.api._
 
     val baseTypedType: BaseTypedType[Id] = implicitly[BaseTypedType[Id]]
 
@@ -83,7 +83,7 @@ class SoftDeleteTest
     val idLens = lens { foo: Foo => foo.id } { (entry, id) => entry.copy(id = id) }
 
     def createSchema: DBIO[Unit] = {
-      import jdbcProfile.api._
+      import driver.api._
       sqlu"""create table FOO_SOFT_DELETE_TEST(
           ID BIGSERIAL,
           NAME varchar not null,
@@ -105,8 +105,8 @@ class SoftDeleteTest
 
   val Foos = new FooDao
 
-  implicit class EntryExtensions(val model: Foo) extends ActiveRecord(Foos)
+  implicit class EntryExtensions(val model: Foo) extends ActiveRecord[Foo, FooDao](Foos)
 
-  implicit class PendingEntryExtensions(val pendingModel: PendingFoo) extends PendingActiveRecord(Foos)
+  implicit class PendingEntryExtensions(val pendingModel: PendingFoo) extends PendingActiveRecord[Foo, PendingFoo, FooDao](Foos)
 
 }

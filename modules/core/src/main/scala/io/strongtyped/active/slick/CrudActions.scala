@@ -10,15 +10,11 @@ import scala.concurrent.ExecutionContext
  * This trait make no assumption about the presence of an Entity and a corresponding ID.
  * Therefore it can also be used for persistence of Value Objects.
  */
-trait CrudActions {
+trait CrudActions[Model, PendingModel] {
 
-  val jdbcProfile: JdbcProfile
+  protected val driver: JdbcProfile
 
-  import jdbcProfile.api._
-
-  type Model
-
-  type PendingModel
+  import driver.api._
 
   // tag::adoc[]
   /** Returns total table count */

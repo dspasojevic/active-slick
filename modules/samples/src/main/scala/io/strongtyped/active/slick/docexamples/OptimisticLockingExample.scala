@@ -1,12 +1,13 @@
 package io.strongtyped.active.slick.docexamples
 
 
+import io.strongtyped.active.slick.JdbcProfileProvider.H2ProfileProvider
+import io.strongtyped.active.slick.Lens._
 import io.strongtyped.active.slick._
 import slick.ast.BaseTypedType
-import slick.driver.H2Driver
-import io.strongtyped.active.slick.Lens._
-import scala.language.postfixOps
+
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.language.postfixOps
 
 object OptimisticLockingExample {
 
@@ -16,9 +17,9 @@ object OptimisticLockingExample {
 
   case class PendingCoffee(name: String)
 
-  object CoffeeRepo extends EntityActions with OptimisticLocking with H2ProfileProvider {
+  object CoffeeRepo extends EntityActions[Coffee, PendingCoffee] with OptimisticLocking[Coffee] with H2ProfileProvider {
 
-    import jdbcProfile.api._
+    import driver.api._
 
     def $version(table: CoffeeTable): Rep[Long] = table.version // #<1>
     def versionLens = lens { coffee:Coffee => coffee.version }  // #<2>
@@ -55,9 +56,9 @@ object OptimisticLockingExample {
     override def entity(pendingEntity: PendingCoffee): Coffee = Coffee(pendingEntity.name, 0, -1)
   }
 
-  implicit class EntryExtensions(val model: Coffee) extends ActiveRecord(CoffeeRepo)
+  implicit class EntryExtensions(val model: Coffee) extends ActiveRecord[Coffee, CrudActions[Coffee, _]](CoffeeRepo)
 
-  implicit class PendingEntryExtensions(val pendingModel: PendingCoffee) extends PendingActiveRecord(CoffeeRepo)
+  implicit class PendingEntryExtensions(val pendingModel: PendingCoffee) extends PendingActiveRecord[Coffee, PendingCoffee, CrudActions[Coffee, PendingCoffee]](CoffeeRepo)
 
   val saveAction = PendingCoffee("Colombia").save()
 }

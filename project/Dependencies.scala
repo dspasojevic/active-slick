@@ -26,6 +26,6 @@ object Dependencies {
   )
 
   val testDeps = Seq(
-    libraryDependencies ++= Seq(h2database, scalaTest)
+    libraryDependencies ++= Seq(h2database, scalaTest, "ch.qos.logback" % "logback-classic" % "1.1.7" % "test")
   )
 }

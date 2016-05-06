@@ -1,5 +1,6 @@
 package io.strongtyped.active.slick
 
+import io.strongtyped.active.slick.JdbcProfileProvider.H2ProfileProvider
 import io.strongtyped.active.slick.Lens._
 import slick.ast.BaseTypedType
 
@@ -21,17 +22,15 @@ trait Schema extends JdbcProfileProvider {
                          price: Double)
 
 
-  class SupplierDao extends EntityActions
-  with OptimisticLocking
-  with SchemaManagement
+  class SupplierDao extends EntityActions[Supplier, PendingSupplier]
+  with OptimisticLocking[Supplier]
+  with SchemaManagement[Supplier, PendingSupplier]
   with H2ProfileProvider {
 
-    import jdbcProfile.api._
+    import driver.api._
 
     val baseTypedType: BaseTypedType[Id] = implicitly[BaseTypedType[Id]]
 
-    type Entity = Supplier
-    type PendingEntity = PendingSupplier
     type Id = Int
     type EntityTable = SuppliersTable
 
@@ -62,17 +61,16 @@ trait Schema extends JdbcProfileProvider {
 
   val Suppliers = new SupplierDao
 
-  implicit class SupplierRecord(val model: Supplier) extends ActiveRecord(Suppliers)
+  implicit class SupplierRecord(val model: Supplier) extends ActiveRecord[Supplier, SupplierDao](Suppliers)
 
-  implicit class PendingSupplierRecord(val pendingModel: PendingSupplier) extends PendingActiveRecord(Suppliers)
+  implicit class PendingSupplierRecord(val pendingModel: PendingSupplier) extends PendingActiveRecord[Supplier, PendingSupplier, SupplierDao](Suppliers)
 
-  class BeersDao extends EntityActions with SchemaManagement with H2ProfileProvider {
+  class BeersDao extends EntityActions[Beer, PendingBeer] with SchemaManagement[Beer, PendingBeer] with H2ProfileProvider {
 
-    import jdbcProfile.api._
+    import driver.api._
 
     val baseTypedType: BaseTypedType[Id] = implicitly[BaseTypedType[Id]]
 
-    type Entity = Beer
     type Id = Int
     type EntityTable = BeersTable
 
@@ -97,18 +95,17 @@ trait Schema extends JdbcProfileProvider {
     def $id(table: EntityTable) = table.id
 
     val idLens = lens { beer: Beer => beer.id } { (beer, id) => beer.copy(id = id) }
-    override type PendingEntity = PendingBeer
 
-    override def entity(pendingEntity: PendingEntity): Beer = Beer(pendingEntity.name, pendingEntity.supID, pendingEntity.price, -1)
+    override def entity(pendingEntity: PendingBeer): Beer = Beer(pendingEntity.name, pendingEntity.supID, pendingEntity.price, -1)
   }
 
   val Beers = new BeersDao
 
-  implicit class BeerRecord(val model: Beer) extends ActiveRecord(Beers) {
+  implicit class BeerRecord(val model: Beer) extends ActiveRecord[Beer, CrudActions[Beer, _]](Beers) {
 
     def supplier() = Suppliers.findOptionById(model.supID)
   }
 
-  implicit class PendingBeerRecord(val pendingModel: PendingBeer) extends PendingActiveRecord(Beers)
+  implicit class PendingBeerRecord(val pendingModel: PendingBeer) extends PendingActiveRecord[Beer, PendingBeer, CrudActions[Beer, PendingBeer]](Beers)
 
 }

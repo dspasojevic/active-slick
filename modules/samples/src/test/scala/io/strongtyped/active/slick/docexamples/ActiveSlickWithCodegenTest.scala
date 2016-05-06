@@ -36,8 +36,8 @@ class ActiveSlickWithCodegenTest extends FlatSpec with H2Suite with OptionValues
 
   }
 
-  override def setupDb: jdbcProfile.backend.DatabaseDef = {
-    import jdbcProfile.api._
+  override def setupDb: driver.backend.DatabaseDef = {
+    import driver.api._
     val db = Database.forURL(
       url = s"jdbc:h2:mem:${this.getClass.getSimpleName};AUTOCOMMIT=TRUE;INIT=runscript from 'modules/samples/src/main/resources/codegen_schema.sql'",
       driver = "org.h2.Driver"

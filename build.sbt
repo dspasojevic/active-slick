@@ -7,7 +7,7 @@ ivyScala := ivyScala.value map {
   _.copy(overrideScalaVersion = true)
 }
 
-organization in ThisBuild := "io.strongtyped"
+organization in ThisBuild := "io.strongtyped.agile"
 
 crossScalaVersions := Seq("2.10.5", "2.11.6")
 
@@ -59,7 +59,6 @@ lazy val samples = Project(
     libraryDependencies ++= Seq(
       "com.typesafe.slick" %% "slick-codegen" % slickVersion,
       "com.h2database" % "h2" % "1.4.187",
-      "org.slf4j" % "slf4j-nop" % "1.7.12", // To silence build warnings
       scalaTest
     ),
     slick <<= slickCodeGenTask,
